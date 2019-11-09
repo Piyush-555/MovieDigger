@@ -25,7 +25,7 @@ def signup():
     if user_id == "username_exists":
         return "username_exists"
 
-    server.add_user_movies(user_id, movies=None)
+    server.add_user_movies(user_id, movie_ids=None)
     return "signed_up"
 
 
@@ -43,25 +43,13 @@ def verify_login():
 
     matched = server.verify_user(uname, enc_pass)
     if matched is True:
-        return "verified"
+        status = "verified"
     elif matched is False:
-        return "password_incorrect"
-    return "username_do_not_exists"
+        status = "password_incorrect"
+    else:
+        status = "username_do_not_exists"
 
-
-@app.route("/get_popular_movies/", methods=['POST'])
-def get_popular_movies():
-    """
-    Accept json={num_movies:num, genre:null/genre}
-    Return num movie ids json_array
-    """
-
-    data = request.get_json()
-    num_movies, genre = data['num_movies'], data['genre']
-    assert genre is None or genre in model.genres
-
-    imdb_ids, movie_names = model.get_popular_movies(num_movies, genre)
-    data = {'imdb_ids': imdb_ids, 'names': movie_names}
+    data = {'username': uname, 'status': status}
     data = json.dumps(data)
     return data
 
@@ -75,13 +63,13 @@ def register_movies():
     """
 
     data = request.get_json()
-    uname, imdb_ids = data['username'], data['imdb_ids']
+    uname, tmdb_ids = data['username'], data['tmdb_ids']
 
     user_id = server.get_user_id(uname)
     if user_id=="username_do_not_exists":
         return "username_do_not_exists"
 
-    server.add_user_movies(user_id, movies=imdb_ids)
+    server.add_user_movies(user_id, movies=tmdb_ids)
     return "ok"
 
 
@@ -99,8 +87,31 @@ def get_user_movies():
     if user_id=="username_do_not_exists":
         return "username_do_not_exists"
 
-    imdb_ids = server.get_user_movies(user_id)
-    data = {'imdb_ids': imdb_ids}
+    movie_ids = server.get_user_movies(user_id)
+    tmdb_ids = server.get_tmdb_ids(movie_ids)
+    movie_names = server.get_movie_names(movie_ids)
+
+    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
+    data = json.dumps(data)
+    return data
+
+
+@app.route("/get_popular_movies/", methods=['POST'])
+def get_popular_movies():
+    """
+    Accept json={num_movies:num, genre:null/genre}
+    Return num movie ids json_array
+    """
+
+    data = request.get_json()
+    num_movies, genre = data['num_movies'], data['genre']
+    assert genre is None or genre in model.genres
+
+    movie_ids = model.get_popular_movies(num_movies, genre)
+    tmdb_ids = server.get_tmdb_ids(movie_ids)
+    movie_names = server.get_movie_names(movie_ids)
+
+    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
@@ -113,10 +124,14 @@ def movies_similar_to():
     """
 
     data = request.get_json()
-    imdb_ids, num_rec = data['imdb_ids'], data['num_result']
+    tmdb_ids, num_rec = data['tmdb_ids'], data['num_result']
 
-    imdb_ids, movie_names = model.get_recommendations(imdb_ids, num_rec)
-    data = {'imdb_ids': imdb_ids, 'names': movie_names}
+    movie_ids = server.get_movie_ids(tmdb_ids)
+    movie_ids = model.get_recommendations(movie_ids, num_rec)
+    tmdb_ids = server.get_tmdb_ids(movie_ids)
+    movie_names = server.get_movie_names(movie_ids)
+
+    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
@@ -135,16 +150,19 @@ def recommend_movies_to_user():
     if user_id=="username_do_not_exists":
         return "username_do_not_exists"
 
-    imdb_ids = server.get_user_movies(user_id)
-    imdb_ids, movie_names = model.get_recommendations(imdb_ids, num_rec)
-    data = {'imdb_ids': imdb_ids, 'names': movie_names}
+    movie_ids = server.get_user_movies(user_id)
+    movie_ids = model.get_recommendations(movie_ids, num_rec)
+    tmdb_ids = server.get_tmdb_ids(movie_ids)
+    movie_names = server.get_movie_names(movie_ids)
+
+    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
 
 @app.route("/")
 def root():
-    return "ROOT"
+    return "I'm gROOT"
 
 
 if __name__ == "__main__":
