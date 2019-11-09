@@ -49,8 +49,8 @@ def verify_login():
     return "username_do_not_exists"
 
 
-@app.route("/popular_movies/", methods=['POST'])
-def popular_movies():
+@app.route("/get_popular_movies/", methods=['POST'])
+def get_popular_movies():
     """
     Accept json={num_movies:num, genre:null/genre}
     Return num movie ids json_array
@@ -113,10 +113,10 @@ def movies_similar_to():
     """
 
     data = request.get_json()
-    imdb_ids, num_recc = data['imdb_ids'], data['num_result']
+    imdb_ids, num_rec = data['imdb_ids'], data['num_result']
 
-    movies_recc = model.get_reccomendations(imdb_ids, num_recc)
-    data = {'imdb_ids': movies_recc}
+    imdb_ids, movie_names = model.get_recommendations(imdb_ids, num_rec)
+    data = {'imdb_ids': imdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
@@ -129,15 +129,15 @@ def recommend_movies_to_user():
     """
 
     data = request.get_json()
-    uname, num_recc = data['username'], data['num_result']
+    uname, num_rec = data['username'], data['num_result']
 
     user_id = server.get_user_id(uname)
     if user_id=="username_do_not_exists":
         return "username_do_not_exists"
 
     imdb_ids = server.get_user_movies(user_id)
-    movies_recc = model.get_reccomendations(imdb_ids, num_recc)
-    data = {'imdb_ids': movies_recc}
+    imdb_ids, movie_names = model.get_recommendations(imdb_ids, num_rec)
+    data = {'imdb_ids': imdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
