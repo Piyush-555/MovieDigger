@@ -52,7 +52,8 @@ def get_popular(num_movies, genre=None):
 	if genre:
 		f=f[f["genres"].str.contains(genre)].reset_index()
 
-	
+	else:
+		f=f.reset_index()
 	f=f.ix[0:num_movies,"movieId"]
 	ids=f.tolist()
 	return ids
