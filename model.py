@@ -18,7 +18,7 @@ def get_popularity_csv():
 	userRatings2.to_csv("dataset/popularity.csv")
 
 get_popularity_csv()
-	
+
 def get_similar(movieId,rating):
 	similar_ratings = corrMatrix[movieId]*(rating-2.5)
 	similar_ratings = similar_ratings.sort_values(ascending=False)
@@ -49,10 +49,12 @@ def get_recommendations(movie_list):
 def get_popular(num_movies, genre=None):
 	f=pd.read_csv("dataset/popularity.csv")
 	ids=[]
-	f=f[f["genres"].str.contains(genre)].reset_index()
+	if genre:
+		f=f[f["genres"].str.contains(genre)].reset_index()
+
+	
 	f=f.ix[0:num_movies,"movieId"]
 	ids=f.tolist()
-	ids
 	return ids
 
 
