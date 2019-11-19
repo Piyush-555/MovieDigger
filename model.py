@@ -30,8 +30,11 @@ def get_recommendations(movie_list):
 	ids=[]
 
 	for Id,rating in movie_list:
-		similar_movies = similar_movies.append(get_similar(Id,rating),ignore_index = True)
-		ids.append(Id)
+		try:
+			similar_movies = similar_movies.append(get_similar(Id,rating),ignore_index = True)
+			ids.append(Id)
+		except KeyError:
+			pass
 
 	similar_movies=similar_movies.sum().sort_values(ascending=False)[0:10]
 	sim=pd.DataFrame(similar_movies)
@@ -41,7 +44,9 @@ def get_recommendations(movie_list):
 	sim=set(sim.tolist())
 	sim=sim-set(ids)
 
-	return list(sim)
+	if len(sim):
+		return list(sim)
+	return "insufficient_ratings"
 
 
 def get_popular(num_movies, genre=None):

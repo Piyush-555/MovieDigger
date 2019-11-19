@@ -129,7 +129,11 @@ def movies_similar_to():
     tmdb_ids, num_rec = data['tmdb_ids'], data['num_result']
 
     movie_ids = server.get_movie_ids(tmdb_ids)
-    recc_movie_ids = model.get_recommendations(movie_ids, num_rec)
+    recc_movie_ids = model.get_recommendations(movie_ids)
+
+    if type(recc_movie_ids) is str:
+        return "insufficient_ratings"
+
     recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
     recc_movie_names = server.get_movie_names(recc_movie_ids)
 
@@ -154,7 +158,11 @@ def recommend_movies_to_user():
 
     tmdb_ids = server.get_user_movies(uname)
     movie_ids = server.get_movie_ids(tmdb_ids)
-    recc_movie_ids = model.get_recommendations(movie_ids, num_rec)
+    recc_movie_ids = model.get_recommendations(movie_ids)
+
+    if type(recc_movie_ids) is str:
+        return "insufficient_ratings"
+
     recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
     recc_movie_names = server.get_movie_names(recc_movie_ids)
 
@@ -169,7 +177,7 @@ def root():
 
 
 if __name__ == "__main__":
-    app.run(host='192.168.100.102', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False)
 
     if 'popularity.csv' not in os.listdir('dataset/'):
         print('popularity.csv not present')
