@@ -3,7 +3,7 @@ import sqlite3
 import utils
 
 
-conn = sqlite3.connect('database')
+conn = sqlite3.connect('database', check_same_thread=False)
 
 def register_user(uname, enc_pass): 
     query = """INSERT INTO USERS (username, password)

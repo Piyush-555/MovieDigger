@@ -22,9 +22,13 @@ def signup():
 
     user_id = server.register_user(uname, enc_pass)
     if user_id == "username_exists":
-        return "username_exists"
+        status = 902
+    else:
+        status = 900
 
-    return "signed_up"
+    data = {'username': uname, 'responsecode': status}
+    data = json.dumps(data)
+    return data
 
 
 @app.route("/verify/", methods=['POST'])
@@ -41,13 +45,17 @@ def verify_login():
 
     matched = server.verify_user(uname, enc_pass)
     if matched is True:
-        status = "verified"
+        status = 900
+        response = "ok"
     elif matched is False:
-        status = "password_incorrect"
+        status = 901
+        response = "Username or Password Incorrect"
     else:
-        status = "username_do_not_exists"
+        status = 903
+        response = "Username doesn't exist"
 
-    data = {'username': uname, 'status': status}
+    data = {'username': uname, 'responsecode': status,
+        'responsemessage': response}
     data = json.dumps(data)
     return data
 
@@ -66,10 +74,16 @@ def register_movies():
 
     check = server.check_user(uname)
     if not check:
-        return "username_do_not_exists"
+        status = 903
+        responsemessage = "Username doesn't exist"
+    else:
+        server.add_user_movies(uname, tmdb_ids, ratings)
+        status = 200
+        responsemessage = "ok"
 
-    server.add_user_movies(uname, tmdb_ids, ratings)
-    return "ok"
+    data = {'responsecode': status, 'responsemessage': response}
+    data = json.dumps(data)
+    return data
 
 
 @app.route("/get_user_movies/", methods=['POST'])
@@ -84,16 +98,24 @@ def get_user_movies():
 
     check = server.check_user(uname)
     if not check:
-        return "username_do_not_exists"
-
-    try:
-        tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
-        movie_ids = server.get_movie_ids(tmdb_ids)
-        movie_names = server.get_movie_names(movie_ids)
-    except ValueError:
+        status = 903
+        responsemessage = "Username doesn't exist"
         tmdb_ids, movie_names, ratings = [], [], []
+    else:
+        try:
+            tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
+            movie_ids = server.get_movie_ids(tmdb_ids)
+            movie_names = server.get_movie_names(movie_ids)
 
-    data = {'tmdb_ids': tmdb_ids, 'names': movie_names, 'ratings': ratings}
+            status = 200
+            responsemessage = ok
+        except ValueError:
+            tmdb_ids, movie_names, ratings = [], [], []
+            status = 703
+            responsemessage = "History not available"
+
+    data = {'responsecode': status, 'responsemessage': responsemessage,
+        'tmdb_ids': tmdb_ids, 'names': movie_names, 'ratings': ratings}
     data = json.dumps(data)
     return data
 
@@ -113,7 +135,8 @@ def get_popular_movies():
     tmdb_ids = server.get_tmdb_ids(movie_ids)
     movie_names = server.get_movie_names(movie_ids)
 
-    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
+    data = {'responsecode': 200, 'responsemessage': "ok",
+        'tmdb_ids': tmdb_ids, 'names': movie_names}
     data = json.dumps(data)
     return data
 
@@ -154,19 +177,30 @@ def recommend_movies_to_user():
 
     check = server.check_user(uname)
     if not check:
-        return "username_do_not_exists"
+        status = 903
+        responsemessage = "Username doesn't exist"
+        recc_tmdb_ids, recc_movie_names = [], []
+    else:
+        tmdb_ids = server.get_user_movies(uname)
+        movie_ids = server.get_movie_ids(tmdb_ids)
+        recc_movie_ids = model.get_recommendations(movie_ids)
 
-    tmdb_ids = server.get_user_movies(uname)
-    movie_ids = server.get_movie_ids(tmdb_ids)
-    recc_movie_ids = model.get_recommendations(movie_ids)
+        if type(recc_movie_ids) is str:
+            status = 601
+            responsemessage = "Insufficient Ratings"
+            recc_tmdb_ids, recc_movie_names = [], []
+        else:
+            if len(recc_movie_ids):
+                status = 200
+                responsemessage = "ok"
+            else:
+                status = 703
+                responsemessage = "History not available"
+            recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
+            recc_movie_names = server.get_movie_names(recc_movie_ids)
 
-    if type(recc_movie_ids) is str:
-        return "insufficient_ratings"
-
-    recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
-    recc_movie_names = server.get_movie_names(recc_movie_ids)
-
-    data = {'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
+    data = {'responsecode': status, 'responsemessage': responsemessage,
+        'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
     data = json.dumps(data)
     return data
 
@@ -177,7 +211,7 @@ def root():
 
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='192.168.100.6', port=5000, debug=False)
 
     if 'popularity.csv' not in os.listdir('dataset/'):
         print('popularity.csv not present')
