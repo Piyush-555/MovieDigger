@@ -3,7 +3,7 @@ import json
 from flask import Flask, request
 
 
-#import model
+import model
 import server
 
 app = Flask(__name__)
