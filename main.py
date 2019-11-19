@@ -107,7 +107,7 @@ def get_popular_movies():
 
     data = request.get_json()
     num_movies, genre = data['num_movies'], data['genre']
-    assert genre is None or genre in model.genres
+    assert genre is None or genre in model.GENRES
 
     movie_ids = model.get_popular_movies(num_movies, genre)
     tmdb_ids = server.get_tmdb_ids(movie_ids)
