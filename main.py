@@ -1,15 +1,14 @@
+import os
 import json
 from flask import Flask, request
 
 
-import model
+#import model
 import server
-
 
 app = Flask(__name__)
 
-
-@app.route("/signup/", methods=['POST'])
+@app.route("/signup/", methods=['GET', 'POST'])
 def signup():
     """
     Accept json={username:username, password:encrypted}
@@ -25,7 +24,6 @@ def signup():
     if user_id == "username_exists":
         return "username_exists"
 
-    server.add_user_movies(user_id, movie_ids=None)
     return "signed_up"
 
 
@@ -64,12 +62,13 @@ def register_movies():
 
     data = request.get_json()
     uname, tmdb_ids = data['username'], data['tmdb_ids']
+    ratings = data['ratings']
 
-    user_id = server.get_user_id(uname)
-    if user_id=="username_do_not_exists":
+    check = server.check_user(uname)
+    if not check:
         return "username_do_not_exists"
 
-    server.add_user_movies(user_id, movies=tmdb_ids)
+    server.add_user_movies(uname, tmdb_ids, ratings)
     return "ok"
 
 
@@ -83,15 +82,15 @@ def get_user_movies():
     data = request.get_json()
     uname = data['username']
 
-    user_id = server.get_user_id(uname)
-    if user_id=="username_do_not_exists":
+    check = server.check_user(uname)
+    if not check:
         return "username_do_not_exists"
 
-    movie_ids = server.get_user_movies(user_id)
-    tmdb_ids = server.get_tmdb_ids(movie_ids)
+    tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
+    movie_ids = server.get_movie_ids(tmdb_ids)
     movie_names = server.get_movie_names(movie_ids)
 
-    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
+    data = {'tmdb_ids': tmdb_ids, 'names': movie_names, 'ratings': ratings}
     data = json.dumps(data)
     return data
 
@@ -127,11 +126,11 @@ def movies_similar_to():
     tmdb_ids, num_rec = data['tmdb_ids'], data['num_result']
 
     movie_ids = server.get_movie_ids(tmdb_ids)
-    movie_ids = model.get_recommendations(movie_ids, num_rec)
-    tmdb_ids = server.get_tmdb_ids(movie_ids)
-    movie_names = server.get_movie_names(movie_ids)
+    recc_movie_ids = model.get_recommendations(movie_ids, num_rec)
+    recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
+    recc_movie_names = server.get_movie_names(recc_movie_ids)
 
-    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
+    data = {'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
     data = json.dumps(data)
     return data
 
@@ -146,16 +145,17 @@ def recommend_movies_to_user():
     data = request.get_json()
     uname, num_rec = data['username'], data['num_result']
 
-    user_id = server.get_user_id(uname)
-    if user_id=="username_do_not_exists":
+    check = server.check_user(uname)
+    if not check:
         return "username_do_not_exists"
 
-    movie_ids = server.get_user_movies(user_id)
-    movie_ids = model.get_recommendations(movie_ids, num_rec)
-    tmdb_ids = server.get_tmdb_ids(movie_ids)
-    movie_names = server.get_movie_names(movie_ids)
+    tmdb_ids = server.get_user_movies(uname)
+    movie_ids = server.get_movie_ids(tmdb_ids)
+    recc_movie_ids = model.get_recommendations(movie_ids, num_rec)
+    recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
+    recc_movie_names = server.get_movie_names(recc_movie_ids)
 
-    data = {'tmdb_ids': tmdb_ids, 'names': movie_names}
+    data = {'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
     data = json.dumps(data)
     return data
 
@@ -166,4 +166,7 @@ def root():
 
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='192.168.100.102', port=5000, debug=False)
+
+    if 'popularity.csv' not in os.listdir('dataset/'):
+        print('popularity.csv not present')
