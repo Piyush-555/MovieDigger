@@ -21,5 +21,5 @@ def get_zipped(col1, col2):
     return zip(col1, col2)
 
 
-def get_unziped(zipped):
+def get_unzipped(zipped):
     return list((zip(*zipped)))

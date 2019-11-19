@@ -86,9 +86,12 @@ def get_user_movies():
     if not check:
         return "username_do_not_exists"
 
-    tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
-    movie_ids = server.get_movie_ids(tmdb_ids)
-    movie_names = server.get_movie_names(movie_ids)
+    try:
+        tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
+        movie_ids = server.get_movie_ids(tmdb_ids)
+        movie_names = server.get_movie_names(movie_ids)
+    except ValueError:
+        tmdb_ids, movie_names, ratings = [], [], []
 
     data = {'tmdb_ids': tmdb_ids, 'names': movie_names, 'ratings': ratings}
     data = json.dumps(data)
