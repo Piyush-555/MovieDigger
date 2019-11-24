@@ -5,6 +5,7 @@ from flask import Flask, request
 
 import model
 import server
+import utils
 
 app = Flask(__name__)
 
@@ -18,6 +19,7 @@ def signup():
     """
 
     data = request.get_json()
+    print(data)
     uname, enc_pass = data['username'], data['password']
 
     user_id = server.register_user(uname, enc_pass)
@@ -27,6 +29,7 @@ def signup():
         status = 900
 
     data = {'username': uname, 'responsecode': status}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -41,6 +44,7 @@ def verify_login():
     """
 
     data = request.get_json()
+    print(data)
     uname, enc_pass = data['username'], data['password']
 
     matched = server.verify_user(uname, enc_pass)
@@ -56,6 +60,7 @@ def verify_login():
 
     data = {'username': uname, 'responsecode': status,
         'responsemessage': response}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -69,6 +74,7 @@ def register_movies():
     """
 
     data = request.get_json()
+    print(data)
     uname, tmdb_ids = data['username'], data['tmdb_ids']
     ratings = data['ratings']
 
@@ -81,7 +87,8 @@ def register_movies():
         status = 200
         responsemessage = "ok"
 
-    data = {'responsecode': status, 'responsemessage': response}
+    data = {'responsecode': status, 'responsemessage': responsemessage}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -94,6 +101,7 @@ def get_user_movies():
     """
 
     data = request.get_json()
+    print(data)
     uname = data['username']
 
     check = server.check_user(uname)
@@ -116,6 +124,7 @@ def get_user_movies():
 
     data = {'responsecode': status, 'responsemessage': responsemessage,
         'tmdb_ids': tmdb_ids, 'names': movie_names, 'ratings': ratings}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -128,15 +137,27 @@ def get_popular_movies():
     """
 
     data = request.get_json()
-    num_movies, genre = data['num_movies'], data['genre']
+    print(data)
+    num_movies = data['num_movies']
+    try:
+        genre = data['genre']
+    except KeyError:
+        genre = None
+
+    try:
+        query = data['query']
+    except KeyError:
+        query = None
+
     assert genre is None or genre in model.GENRES
 
-    movie_ids = model.get_popular_movies(num_movies, genre)
+    movie_ids = model.get_popular_movies(num_movies, genre, query)
     tmdb_ids = server.get_tmdb_ids(movie_ids)
     movie_names = server.get_movie_names(movie_ids)
 
     data = {'responsecode': 200, 'responsemessage': "ok",
         'tmdb_ids': tmdb_ids, 'names': movie_names}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -149,6 +170,7 @@ def movies_similar_to():
     """
 
     data = request.get_json()
+    print(data)
     tmdb_ids, num_rec = data['tmdb_ids'], data['num_result']
 
     movie_ids = server.get_movie_ids(tmdb_ids)
@@ -161,6 +183,7 @@ def movies_similar_to():
     recc_movie_names = server.get_movie_names(recc_movie_ids)
 
     data = {'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
+    print(data)
     data = json.dumps(data)
     return data
 
@@ -173,7 +196,8 @@ def recommend_movies_to_user():
     """
 
     data = request.get_json()
-    uname, num_rec = data['username'], data['num_result']
+    print(data)
+    uname = data['username']
 
     check = server.check_user(uname)
     if not check:
@@ -181,26 +205,27 @@ def recommend_movies_to_user():
         responsemessage = "Username doesn't exist"
         recc_tmdb_ids, recc_movie_names = [], []
     else:
-        tmdb_ids = server.get_user_movies(uname)
-        movie_ids = server.get_movie_ids(tmdb_ids)
-        recc_movie_ids = model.get_recommendations(movie_ids)
-
-        if type(recc_movie_ids) is str:
-            status = 601
-            responsemessage = "Insufficient Ratings"
-            recc_tmdb_ids, recc_movie_names = [], []
-        else:
-            if len(recc_movie_ids):
+        try:
+            tmdb_ids, ratings = server.get_user_movies_n_ratings(uname)
+            movie_ids = server.get_movie_ids(tmdb_ids)
+            recc_movie_ids = model.get_recommendations(utils.get_zipped(movie_ids, ratings))
+            if type(recc_movie_ids) is str:  # KeyError
+                status = 601
+                responsemessage = "Insufficient Ratings"
+                recc_tmdb_ids, recc_movie_names = [], []
+            else:  # All OK
                 status = 200
                 responsemessage = "ok"
-            else:
-                status = 703
-                responsemessage = "History not available"
-            recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
-            recc_movie_names = server.get_movie_names(recc_movie_ids)
+                recc_tmdb_ids = server.get_tmdb_ids(recc_movie_ids)
+                recc_movie_names = server.get_movie_names(recc_movie_ids)
+        except ValueError:  # User had not rated movies yet
+            status = 703
+            responsemessage = "History not available"
+            recc_tmdb_ids, recc_movie_names = [], []
 
     data = {'responsecode': status, 'responsemessage': responsemessage,
         'tmdb_ids': recc_tmdb_ids, 'names': recc_movie_names}
+    print(data)
     data = json.dumps(data)
     return data
 
