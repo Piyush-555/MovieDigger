@@ -49,12 +49,16 @@ def get_recommendations(movie_list):
 	return "insufficient_ratings"
 
 
-def get_popular(num_movies, genre=None):
+def get_popular_movies(num_movies, genre=None, query=None, df=f):
 	ids=[]
-	if genre:
-		f=f[f["genres"].str.contains(genre)].reset_index()
+	if genre and query:
+		f=df[(df["genres"].str.contains(genre)) & (df["title"].str.lower().str.contains(query.lower()))].reset_index()
+	elif genre:
+		f=df[df["genres"].str.contains(genre)].reset_index()
+	elif query:
+		f=df[df["title"].str.lower().str.contains(query.lower())].reset_index()
 	else:
-		f=f.reset_index()
+		f=df.reset_index()
 	f=f.ix[0:num_movies,"movieId"]
 	ids=f.tolist()
 	return ids
