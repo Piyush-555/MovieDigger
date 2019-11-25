@@ -116,7 +116,7 @@ def get_user_movies():
             movie_names = server.get_movie_names(movie_ids)
 
             status = 200
-            responsemessage = ok
+            responsemessage = "ok"
         except ValueError:
             tmdb_ids, movie_names, ratings = [], [], []
             status = 703
