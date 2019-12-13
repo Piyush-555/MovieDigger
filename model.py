@@ -64,12 +64,24 @@ def get_popular_movies(num_movies, genre=None, query=None, df=f):
 	return ids
 
 if __name__=="__main__":
-	def create_popularity_csv():
+	def get_popularity_csv():
 		userRatings2=ratings.drop("userId",axis=1)
-		userRatings2=userRatings2.groupby(['movieId','genres']).sum().reset_index()
-		userRatings2=userRatings2.sort_values('rating',ascending=False)
-		userRatings2=userRatings2.drop(["rating"],axis=1)
+		c=userRatings2.rating.mean()
+		mini=3
+		userRatings3=userRatings2
+		userRatings2=userRatings2.groupby(['movieId','genres']).mean().reset_index()
+		userRatings3=userRatings3.groupby(['movieId','genres']).count().reset_index()
+		userRatings3=userRatings3.drop("title",axis=1)
+		userRatings3.columns=["movieId","genres","counting"]
+		userRatings2=pd.concat([userRatings2,userRatings3.counting],axis=1)
+		userRatings2["record"]=(userRatings2.counting/(userRatings2.counting+mini))*userRatings2.rating+(mini/(mini+userRatings2.counting))*c
+		userRatings2.drop(["rating","counting"],axis=1,inplace=True)
+		userRatings2=userRatings2.sort_values('record',ascending=False)
+		userRatings2=userRatings2.drop(["record"],axis=1)
 		userRatings2.to_csv("dataset/popularity.csv")
+		
+		del userRatings2
+		del userRatings3
 
-	create_popularity_csv()
+	get_popularity_csv()
 
